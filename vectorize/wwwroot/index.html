@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vectorize.NET</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/clike/clike.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/theme/vscode-dark.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/theme/default.min.css">
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --sidebar-bg: #f3f3f3;
+            --topbar-bg: #ffffff;
+            --editor-bg: #ffffff;
+            --active-tab-bg: #ffffff;
+            --inactive-tab-bg: #ececec;
+            --border-color: #e0e0e0;
+            --button-bg: #0098ff;
+            --button-hover: #007acc;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1e1e1e;
+            --text-color: #d4d4d4;
+            --sidebar-bg: #252526;
+            --topbar-bg: #3c3c3c;
+            --editor-bg: #1e1e1e; /* Match the CodeMirror dark background */
+            --active-tab-bg: #1e1e1e;
+            --inactive-tab-bg: #2d2d2d;
+            --border-color: #454545;
+            --button-bg: #0098ff;
+            --button-hover: #007acc;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 50px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            height: 35px;
+            background-color: var(--topbar-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .editor-container {
+            flex-grow: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .editor {
+            flex-grow: 1;
+            height: 100%;
+            overflow: auto;
+        }
+
+        .CodeMirror {
+            height: 100% !important;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            background-color: var(--inactive-tab-bg);
+        }
+
+        .tab {
+            padding: 8px 20px;
+            background-color: var(--inactive-tab-bg);
+            border-right: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background-color: var(--active-tab-bg);
+        }
+
+        button {
+            background-color: var(--button-bg);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: var(--button-hover);
+        }
+
+        .theme-toggle {
+            margin-left: auto;
+        }
+
+        #result {
+            display: none;
+            height: 100%;
+        }
+
+        /* Light theme editor background */
+        [data-theme="light"] .CodeMirror {
+            background-color: #ffffff; /* White background for light mode */
+        }
+
+        /* Dark theme editor background */
+        [data-theme="dark"] .CodeMirror {
+            background-color: #1e1e1e; /* Dark background for dark mode */
+        }
+
+        /* Light theme editor styling */
+        [data-theme="light"] .CodeMirror {
+            background-color: #ffffff;
+            color: #000000; /* Default text color (black) */
+        }
+
+        [data-theme="light"] .CodeMirror .cm-keyword {
+            color: #0000ff; /* Blue for keywords */
+        }
+
+        [data-theme="light"] .CodeMirror .cm-def {
+            color: #795e26; /* Brown for function definitions */
+        }
+
+        [data-theme="light"] .CodeMirror .cm-type {
+            color: #267f99; /* Teal for types */
+        }
+
+        [data-theme="light"] .CodeMirror .cm-variable {
+            color: #001080; /* Dark blue for variables */
+        }
+
+        [data-theme="light"] .CodeMirror .cm-string {
+            color: #a31515; /* Red for strings */
+        }
+
+        [data-theme="light"] .CodeMirror .cm-comment {
+            color: #008000; /* Green for comments */
+        }
+
+        [data-theme="light"] .CodeMirror .cm-operator {
+            color: #000000; /* Black for operators */
+        }
+
+        /* Dark theme editor styling */
+        [data-theme="dark"] .CodeMirror {
+            background-color: #1e1e1e;
+            color: #d4d4d4; /* Default text color (light gray) */
+        }
+
+        [data-theme="dark"] .CodeMirror .cm-keyword {
+            color: #569cd6; /* Light blue for keywords */
+        }
+
+        [data-theme="dark"] .CodeMirror .cm-def {
+            color: #dcdcaa; /* Light yellow for function definitions */
+        }
+
+        [data-theme="dark"] .CodeMirror .cm-type {
+            color: #4ec9b0; /* Teal for types */
+        }
+
+        [data-theme="dark"] .CodeMirror .cm-variable {
+            color: #9cdcfe; /* Light blue for variables */
+        }
+
+        [data-theme="dark"] .CodeMirror .cm-string {
+            color: #d69d85; /* Light red/pink for strings */
+        }
+
+        [data-theme="dark"] .CodeMirror .cm-comment {
+            color: #6a9955; /* Light green for comments */
+        }
+
+        [data-theme="dark"] .CodeMirror .cm-operator {
+            color: #d4d4d4; /* Light gray for operators */
+        }
+
+        /* Light theme cursor color */
+        [data-theme="light"] .CodeMirror div.CodeMirror-cursor {
+            border-left: 1px solid black; /* Black cursor for light mode */
+        }
+
+        /* Dark theme cursor color */
+        [data-theme="dark"] .CodeMirror div.CodeMirror-cursor {
+            border-left: 1px solid white; /* White cursor for dark mode */
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <!-- Add sidebar icons here if needed -->
+        </div>
+        <div class="main-content">
+            <div class="topbar">
+                <button onclick="vectorizeFunction()">Vectorize Function</button>
+                <div class="theme-toggle">
+                    <label>
+                        <input type="checkbox" id="theme-switch"> Dark Mode
+                    </label>
+                </div>
+            </div>
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('original')">Original Function</div>
+                <div class="tab" onclick="switchTab('vectorized')">Vectorized Function</div>
+            </div>
+            <div class="editor-container">
+                <div class="editor" id="originalCode"></div>
+                <div class="editor" id="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var editor = CodeMirror(document.getElementById("originalCode"), {
+            value: `public double SquareRoot(double x)
+{
+    return Math.Sqrt(x);
+}`,
+            mode: "text/x-csharp",
+            theme: "default",
+            lineNumbers: true,
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            indentUnit: 4
+        });
+
+        var resultEditor;
+
+        function vectorizeFunction() {
+            fetch('/vectorize', {
+                method: 'POST',
+                body: editor.getValue()
+            })
+            .then(response => response.text())
+            .then(data => {
+                if (!resultEditor) {
+                    resultEditor = CodeMirror(document.getElementById("result"), {
+                        value: data,
+                        mode: "text/x-csharp",
+                        theme: editor.getOption("theme"),
+                        lineNumbers: true,
+                        readOnly: true,
+                        autoCloseBrackets: true,
+                        matchBrackets: true,
+                        indentUnit: 4
+                    });
+                } else {
+                    resultEditor.setValue(data);
+                }
+                switchTab('vectorized');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function switchTab(tab) {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(t => t.classList.remove('active'));
+            
+            if (tab === 'original') {
+                document.querySelector('.tab:first-child').classList.add('active');
+                document.getElementById('originalCode').style.display = 'block';
+                document.getElementById('result').style.display = 'none';
+            } else {
+                document.querySelector('.tab:last-child').classList.add('active');
+                document.getElementById('originalCode').style.display = 'none';
+                document.getElementById('result').style.display = 'block';
+            }
+        }
+
+        // Theme switching
+        const themeSwitch = document.getElementById('theme-switch');
+        const currentTheme = localStorage.getItem('theme');
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            const editorTheme = theme === 'dark' ? 'vscode-dark' : 'default';
+
+            // Set the editor theme for both editors
+            editor.setOption("theme", editorTheme);
+            if (resultEditor) {
+                resultEditor.setOption("theme", editorTheme);
+            }
+
+            // Apply background color change explicitly to the CodeMirror editor container
+            const editorBg = theme === 'dark' ? '#1e1e1e' : '#ffffff';
+            const editorTextColor = theme === 'dark' ? '#d4d4d4' : '#000000';
+
+            // Apply background and text color
+            document.querySelector('.CodeMirror').style.backgroundColor = editorBg;
+            document.querySelector('.CodeMirror').style.color = editorTextColor;
+
+            document.querySelector('.CodeMirror-linenumbers').style.backgroundColor = editorBg;
+            document.querySelector('.CodeMirror-linenumbers').style.color = editorTextColor;
+
+            // Apply background and text color for result editor if it exists
+            if (resultEditor) {
+                document.querySelector('#result .CodeMirror').style.backgroundColor = editorBg;
+                document.querySelector('#result .CodeMirror').style.color = editorTextColor;
+            }
+        }
+
+        if (currentTheme) {
+            applyTheme(currentTheme);
+            themeSwitch.checked = currentTheme === 'dark';
+        } else {
+            applyTheme('light');  // Default to light theme if not set
+        }
+
+        function switchTheme(e) {
+            const theme = e.target.checked ? 'dark' : 'light';
+            localStorage.setItem('theme', theme);
+            applyTheme(theme);
+        }
+
+        themeSwitch.addEventListener('change', switchTheme, false);
+    </script>
+</body>
+</html>
